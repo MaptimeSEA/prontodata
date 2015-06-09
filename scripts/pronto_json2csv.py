@@ -11,6 +11,7 @@
 
 import csv
 import os
+from datetime import datetime
 try:
     import simplejson as json
 except:
@@ -53,6 +54,63 @@ def flatten_json_data(in_data):
         station['queried_timestamp'] = in_data['timestamp']
     return station_data
 
+def to_readable_keys(in_data):
+    """
+    Mapping the Field Names to more human readable
+    `Name` values from the field dictionary found here:
+    https://www.prontocycleshare.com/assets/pdf/JSON.pdf
+
+    :return:
+    :param in_data: A list containing a file of data as dictionaries.
+    :return: Updated with human readable keys.
+    """
+    readable_field_names = []
+
+    for row in in_data:
+        readable_field_names.append(
+            {
+                'queried_timestamp': row['queried_timestamp'],
+                'blocked': row['b'],
+                'available_bikes': row['ba'],
+                'bike_key_dispenser': row['bk'],
+                'bike_keys_available': row['bl'],
+                'unavailable_bikes': row['bx'],
+                'available_bike_docks': row['da'],
+                'unavailable_bike_docks': row['dx'],
+                'bike_station_id': row['id'],
+                'latitude': row['la'],
+                'lc': row['lc'],
+                'longitude': row['lo'],
+                'latest_update_time': row['lu'],
+                'exposed_as_out_of_service': row['m'],
+                'terminal_name': row['n'],
+                'public_bike_station_name': row['s'],
+                'status': row['st'],
+                'suspended': row['su']
+            }
+        )
+
+    return readable_field_names
+
+def to_readable_timestamp(in_data, in_fields):
+    """
+    Convert UNIX Epoch Time to Human Readable Timestamp
+
+    :param in_data: List of data as dictionaries
+    :param in_fields: Field Names Containing Timestamps
+    :return:
+    """
+    out_data = []
+
+    for row in in_data:
+        for field in in_fields:
+            time_as_float = row[field] / 1000.0
+            converted_time = datetime.fromtimestamp(time_as_float).strftime('%Y-%m-%d %H:%M:%S.%f')
+            row[field] = converted_time
+        out_data.append(row)
+
+    return out_data
+
 def write_to_csv(in_data, in_fields, out_data_path):
     """
     Given a list of records, write out to a CSV File.
@@ -93,16 +151,34 @@ if __name__ == '__main__':
                 json_data = json.load(data_file_handle)
                 # Process
                 flattened_json_data = flatten_json_data(json_data)
+                flattened_json_data = to_readable_keys(flattened_json_data)
+                flattened_json_data = to_readable_timestamp(flattened_json_data, ['queried_timestamp', 'latest_update_time'])
                 # Add to queue for output to CSV
                 finished_rows += flattened_json_data
             except Exception as e:
                 files_failed_to_process.append(data_file)
 
     # Write to CSV
+
     fields = [
-        'queried_timestamp', 'b', 'ba', 'bk', 'bl',
-        'bx', 'da', 'dx', 'id', 'la', 'lc', 'lo', 'lu',
-        'm', 'n', 's', 'st', 'su'
+        'queried_timestamp',
+        'blocked',
+        'available_bikes',
+        'bike_key_dispenser',
+        'bike_keys_available',
+        'unavailable_bikes',
+        'available_bike_docks',
+        'unavailable_bike_docks',
+        'bike_station_id',
+        'latitude',
+        'lc',
+        'longitude',
+        'latest_update_time',
+        'exposed_as_out_of_service',
+        'terminal_name',
+        'public_bike_station_name',
+        'status',
+        'suspended'
     ]
     write_to_csv(finished_rows, fields, output_path)
 
