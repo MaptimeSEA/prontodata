@@ -3,7 +3,7 @@
 """
 .. module:: pronto_json2csv.py
     :platform: Unix
-    :synopsis: Convert Pronto Station Feed to CSV (Tab - Delimited) Data File.
+    :synopsis: Convert Pronto Station Feed to CSV Data File.
     
 .. moduleauthor:: MaptimeSEA
 
@@ -11,8 +11,10 @@
 
 import csv
 import os
-import simplejson
-from simplejson import JSONDecodeError
+try:
+    import simplejson as json
+except:
+    import json
 
 def subset_filelist_by_time_interval(file_list, time_interval=None):
     """
@@ -22,10 +24,21 @@ def subset_filelist_by_time_interval(file_list, time_interval=None):
     :param time_interval: Valid values currently are 5, 10, 15, 30, 60 minutes.
     :return: A list of file names matching the request time interval.
     """
-
     # Didn't get a time_interval, return all the filez.
     if not time_interval:
         return file_list
+
+    filters = {
+        5: ('5.json','0.json'),
+        10: ('0.json'),
+        15: ('15.json','30.json','45.json','00.json'),
+        30: ('00.json','30.json'),
+        60: ('00.json')
+    }
+    try:
+        return [file for file in file_list if file.endswith(filters[time_interval])]
+    except KeyError:
+        print "Unsupported Time Interval Given. Values are: 5, 10, 15, 30, 60."
 
 def flatten_json_data(in_data):
     """
@@ -33,47 +46,64 @@ def flatten_json_data(in_data):
     transform the data to return a flattened output prepped for
     writing to CSV.
 
-    :return:
+    :return: a list of individual records represented as dictionaries.
     """
     station_data = in_data['stations']
     for station in station_data:
         station['queried_timestamp'] = in_data['timestamp']
     return station_data
 
-def write_to_csv(in_data, out_data_path):
+def write_to_csv(in_data, in_fields, out_data_path):
     """
     Given a list of records, write out to a CSV File.
-    :param in_data:
-    :return:
+
+    :param in_data: a list of records as dictionaries.
+    :param in_fields: a list of field names.
+    :param out_data_path: pathway for output file.
+    :return: True if sucessfully executed.
     """
-    pass
+    with open(out_data_path, 'w') as out_file_handle:
+        writer = csv.DictWriter(out_file_handle, fieldnames=in_fields)
+
+        writer.writeheader()
+        for row in in_data:
+            writer.writerow(row)
+
+    return True
 
 if __name__ == '__main__':
 
     # Setup
+    time_interval = 15
     data_dir = os.path.join(os.path.pardir, 'data_minutely')
-    files_of_interest = subset_filelist_by_time_interval(os.listdir(data_dir))
+    files_of_interest = subset_filelist_by_time_interval(os.listdir(data_dir), time_interval)
     output_path = os.path.join(os.getcwd(), 'pronto_data_processed.csv')
 
     files_failed_to_process = []
     finished_rows = []
 
+    # Begin iteration through files.
     for data_file in files_of_interest:
         data_file_path = os.path.join(data_dir, data_file)
 
         # Create a file handle for each file.
-        with open(data_file_path) as data_file_handle:
+        with open(data_file_path, 'rb') as data_file_handle:
             # Read JSON File
             try:
-                json_data = simplejson.load(data_file_handle)
+                json_data = json.load(data_file_handle)
                 # Process
                 flattened_json_data = flatten_json_data(json_data)
                 # Add to queue for output to CSV
                 finished_rows += flattened_json_data
-            except JSONDecodeError as e:
+            except Exception as e:
                 files_failed_to_process.append(data_file)
 
     # Write to CSV
-    write_to_csv(finished_rows, output_path)
+    fields = [
+        'queried_timestamp', 'b', 'ba', 'bk', 'bl',
+        'bx', 'da', 'dx', 'id', 'la', 'lc', 'lo', 'lu',
+        'm', 'n', 's', 'st', 'su'
+    ]
+    write_to_csv(finished_rows, fields, output_path)
 
     print "Finished. %s files failed to process: %s" % (len(files_failed_to_process), files_failed_to_process)
