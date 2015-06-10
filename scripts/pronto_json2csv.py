@@ -22,7 +22,7 @@ def subset_filelist_by_time_interval(file_list, time_interval=None):
     Given a list of files, return only those who match a given time interval.
     Currently stubbed, Just reflects input data.
 
-    :param time_interval: Valid values currently are 5, 10, 15, 30, 60 minutes.
+    :param time_interval: Valid values currently are 1, 5, 10, 15, 30, 60 minutes.
     :return: A list of file names matching the request time interval.
     """
     # Didn't get a time_interval, return all the filez.
@@ -30,6 +30,7 @@ def subset_filelist_by_time_interval(file_list, time_interval=None):
         return file_list
 
     filters = {
+        1: ('.json'),
         5: ('5.json','0.json'),
         10: ('0.json'),
         15: ('15.json','30.json','45.json','00.json'),
@@ -39,7 +40,7 @@ def subset_filelist_by_time_interval(file_list, time_interval=None):
     try:
         return [file for file in file_list if file.endswith(filters[time_interval])]
     except KeyError:
-        print "Unsupported Time Interval Given. Values are: 5, 10, 15, 30, 60."
+        print "Unsupported Time Interval Given. Values are: 1, 5, 10, 15, 30, 60."
 
 def flatten_json_data(in_data):
     """
@@ -132,7 +133,7 @@ def write_to_csv(in_data, in_fields, out_data_path):
 if __name__ == '__main__':
 
     # Setup
-    time_interval = 15
+    time_interval = 1
     data_dir = os.path.join(os.path.pardir, 'data_minutely')
     files_of_interest = subset_filelist_by_time_interval(os.listdir(data_dir), time_interval)
     output_path = os.path.join(os.getcwd(), 'pronto_data_processed.csv')

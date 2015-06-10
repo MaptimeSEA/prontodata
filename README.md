@@ -5,6 +5,8 @@ Data are being pulled from [here][1].
 
 Field descriptions available [here][2].
 
+**Thanks** to Pronto for providing trip data for June 08th and June 09th!
+
 ## Other Datasets of Interest
 
 - [Seattle Bicycle Racks][3]
